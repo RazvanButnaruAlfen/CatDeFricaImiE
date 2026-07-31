@@ -189,19 +189,20 @@ def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
 
 
 def create_daily_report_jpg(today, tension, recommendation):
-    width, height = 1400, 1800
+    # Format vertical optimizat pentru telefon: 1080 x 1920
+    width, height = 1080, 1920
 
-    bg = (10, 17, 24)
-    panel = (25, 36, 48)
-    panel_alt = (33, 46, 59)
-    white = (242, 245, 248)
-    muted = (174, 188, 201)
-    green = (74, 214, 145)
-    yellow = (248, 204, 83)
-    orange = (247, 143, 68)
-    red = (238, 79, 79)
-    cream = (246, 235, 205)
-    ink = (38, 42, 46)
+    bg = (8, 14, 20)
+    panel = (24, 34, 45)
+    panel_alt = (31, 44, 57)
+    white = (245, 247, 250)
+    muted = (181, 194, 207)
+    green = (77, 219, 148)
+    yellow = (250, 208, 87)
+    orange = (248, 144, 70)
+    red = (239, 75, 75)
+    cream = (248, 237, 205)
+    ink = (34, 38, 42)
 
     protocol_name, protocol_text = protocol(tension)
     accent = (
@@ -215,155 +216,183 @@ def create_daily_report_jpg(today, tension, recommendation):
 
     if tension < 30:
         verdict = "Alexandra pare calmă. Sistemul rămâne suspicios."
-        face = ":)"
         mood = "CALM SUSPECT"
     elif tension < 50:
         verdict = "Primele semne de nerăbdare au fost detectate."
-        face = ":|"
         mood = "UȘOR AGITATĂ"
     elif tension < 80:
         verdict = "Tensiunea crește. Telefonul trebuie lăsat jos din când în când."
-        face = ":O"
         mood = "EMOȚII ACTIVE"
     elif tension < 100:
         verdict = "Brașovul se apropie. Negarea nu mai este o strategie."
-        face = "!!!"
         mood = "ALERTĂ SERIOASĂ"
     else:
         verdict = "Contact total confirmat. Sistemul nu mai poate interveni."
-        face = "X_X"
         mood = "PROTOCOL NEGRU"
 
     img = Image.new("RGB", (width, height), bg)
     draw = ImageDraw.Draw(img)
 
-    # Border and header
+    # Margini și chenar
     draw.rounded_rectangle(
-        (35, 35, width - 35, height - 35),
-        radius=28,
+        (24, 24, width - 24, height - 24),
+        radius=26,
         outline=accent,
         width=5,
     )
 
-    draw.text((80, 70), "S.A.T.A.", font=font(96, True), fill=accent)
+    # Antet compact și lizibil
+    draw.text((58, 52), "S.A.T.A.", font=font(92, True), fill=accent)
     draw.text(
-        (82, 175),
+        (60, 152),
         "Sistem Automat pentru Tensiunea Alexandrei",
-        font=font(36, True),
+        font=font(31, True),
         fill=white,
     )
     draw.text(
-        (82, 230),
-        f"RAPORTUL ZILEI  |  {today.strftime('%d.%m.%Y')}",
+        (60, 202),
+        f"RAPORTUL ZILEI • {today.strftime('%d.%m.%Y')}",
         font=font(29, True),
         fill=muted,
     )
 
-    # Stamp
-    stamp_box = (940, 75, 1310, 235)
-    draw.rounded_rectangle(stamp_box, radius=18, outline=red, width=7)
-    draw.text((993, 100), "STRICT", font=font(43, True), fill=red)
-    draw.text((980, 154), "SECRET", font=font(43, True), fill=red)
+    # Ștampilă TOP SECRET foarte vizibilă
+    draw.rounded_rectangle(
+        (655, 52, 1015, 225),
+        radius=18,
+        outline=red,
+        width=8,
+    )
+    draw.text((714, 78), "TOP", font=font(58, True), fill=red)
+    draw.text((674, 138), "SECRET", font=font(58, True), fill=red)
 
-    # Main tension card
-    draw.rounded_rectangle((70, 305, 1330, 720), radius=34, fill=panel)
-    draw.text((110, 345), "NIVELUL DE TENSIUNE ALEXANDRA", font=font(35, True), fill=muted)
-    draw.text((110, 405), f"{tension}%", font=font(142, True), fill=accent)
+    # Card principal
+    draw.rounded_rectangle((48, 270, 1032, 600), radius=28, fill=panel)
 
-    draw.rounded_rectangle((765, 365, 1260, 600), radius=26, fill=panel_alt)
-    draw.text((805, 400), f"PROTOCOL {protocol_name}", font=font(35, True), fill=white)
-    draw.text((805, 455), protocol_text, font=font(30), fill=muted)
-    draw.text((805, 520), face, font=font(58, True), fill=accent)
+    draw.text(
+        (82, 305),
+        "NIVEL DE TENSIUNE",
+        font=font(33, True),
+        fill=muted,
+    )
+    draw.text((80, 350), f"{tension}%", font=font(132, True), fill=accent)
 
-    bar_x1, bar_y1, bar_x2, bar_y2 = 110, 630, 1260, 685
-    draw.rounded_rectangle((bar_x1, bar_y1, bar_x2, bar_y2), radius=27, fill=(68, 80, 92))
+    draw.rounded_rectangle((590, 320, 985, 505), radius=24, fill=panel_alt)
+    draw.text(
+        (625, 352),
+        f"PROTOCOL {protocol_name}",
+        font=font(31, True),
+        fill=white,
+    )
+    draw.text((625, 405), protocol_text, font=font(29), fill=muted)
+    draw.text((625, 454), mood, font=font(28, True), fill=accent)
+
+    bar_x1, bar_y1, bar_x2, bar_y2 = 82, 520, 985, 565
+    draw.rounded_rectangle((bar_x1, bar_y1, bar_x2, bar_y2), radius=22, fill=(70, 82, 94))
     filled = bar_x1 + int((bar_x2 - bar_x1) * tension / 100)
     draw.rounded_rectangle(
-        (bar_x1, bar_y1, max(bar_x1 + 35, filled), bar_y2),
-        radius=27,
+        (bar_x1, bar_y1, max(bar_x1 + 32, filled), bar_y2),
+        radius=22,
         fill=accent,
     )
-    draw.text((110, 694), "0%", font=font(22, True), fill=muted)
-    draw.text((650, 694), "50%", font=font(22, True), fill=muted)
-    draw.text((1205, 694), "100%", font=font(22, True), fill=muted)
+    draw.text((82, 570), "0%", font=font(20, True), fill=muted)
+    draw.text((502, 570), "50%", font=font(20, True), fill=muted)
+    draw.text((940, 570), "100%", font=font(20, True), fill=muted)
 
-    # Verdict strip
-    draw.rounded_rectangle((70, 750, 1330, 885), radius=26, fill=cream)
-    draw.text((105, 785), "CONCLUZIA SISTEMULUI", font=font(28, True), fill=ink)
-    draw.text((105, 830), verdict, font=font(31, True), fill=ink)
+    # Concluzie
+    draw.rounded_rectangle((48, 630, 1032, 780), radius=26, fill=cream)
+    draw.text((80, 666), "CONCLUZIA SISTEMULUI", font=font(29, True), fill=ink)
+    draw_wrapped(
+        draw,
+        verdict,
+        (80, 716),
+        51,
+        font(31, True),
+        ink,
+        spacing=11,
+    )
 
-    # Operational report
-    draw.rounded_rectangle((70, 925, 835, 1245), radius=28, fill=panel)
-    draw.text((110, 965), "BULETIN OPERATIV", font=font(34, True), fill=accent)
+    # Buletin operativ - pe toată lățimea pentru text mare
+    draw.rounded_rectangle((48, 810, 1032, 1065), radius=26, fill=panel)
+    draw.text((80, 848), "BULETIN OPERATIV", font=font(32, True), fill=accent)
     draw_wrapped(
         draw,
         operational_report(today),
-        (110, 1030),
-        44,
-        font(31),
+        (80, 904),
+        53,
+        font(30),
         white,
-        spacing=15,
+        spacing=12,
     )
 
-    # Fun diagnostics
-    draw.rounded_rectangle((865, 925, 1330, 1245), radius=28, fill=panel_alt)
-    draw.text((905, 965), "INDICATORI SUSPECȚI", font=font(31, True), fill=accent)
+    # Indicatori - 2 coloane, dar cu text mare
+    draw.rounded_rectangle((48, 1095, 1032, 1335), radius=26, fill=panel_alt)
+    draw.text((80, 1130), "INDICATORI SUSPECȚI", font=font(31, True), fill=accent)
 
-    checks = [
+    left_items = [
         ("Verificare telefon", "FRECVENTĂ"),
         ("Zâmbete fără motiv", "DETECTATE"),
+    ]
+    right_items = [
         ("Calm afișat", "NECONVINGĂTOR"),
         ("Gânduri despre Brașov", "CONFIRMATE"),
     ]
-    y = 1030
-    for label, value in checks:
-        draw.text((905, y), label, font=font(25), fill=white)
-        draw.text((905, y + 31), value, font=font(24, True), fill=accent)
-        y += 69
 
-    # Timeline
-    draw.rounded_rectangle((70, 1285, 1330, 1465), radius=28, fill=panel)
-    draw.text((110, 1320), "CRONOLOGIA MISIUNII", font=font(32, True), fill=accent)
+    y1 = 1190
+    for label, value in left_items:
+        draw.text((82, y1), label, font=font(26), fill=white)
+        draw.text((82, y1 + 34), value, font=font(25, True), fill=accent)
+        y1 += 88
+
+    y2 = 1190
+    for label, value in right_items:
+        draw.text((555, y2), label, font=font(26), fill=white)
+        draw.text((555, y2 + 34), value, font=font(25, True), fill=accent)
+        y2 += 88
+
+    # Cronologie compactă
+    draw.rounded_rectangle((48, 1365, 1032, 1535), radius=26, fill=panel)
+    draw.text((80, 1398), "CRONOLOGIA MISIUNII", font=font(30, True), fill=accent)
 
     timeline = [
-        ("09 AUG", "Intrare în România"),
-        ("14 AUG", "Contact în Ploiești"),
-        ("15-17 AUG", "Misiunea Brașov"),
+        ("09 AUG", "România"),
+        ("14 AUG", "Ploiești"),
+        ("15–17 AUG", "Brașov"),
     ]
-    x_positions = [130, 510, 930]
-    for (date_label, event), x in zip(timeline, x_positions):
-        draw.ellipse((x, 1382, x + 32, 1414), fill=accent)
-        draw.text((x + 48, 1365), date_label, font=font(25, True), fill=white)
-        draw.text((x + 48, 1403), event, font=font(23), fill=muted)
+    x_positions = [85, 390, 710]
 
-    # Recommendation card
-    draw.rounded_rectangle((70, 1505, 1330, 1690), radius=28, fill=cream)
-    draw.text((110, 1540), "RECOMANDAREA ZILEI", font=font(31, True), fill=ink)
+    for (date_label, event), x in zip(timeline, x_positions):
+        draw.ellipse((x, 1460, x + 30, 1490), fill=accent)
+        draw.text((x + 43, 1448), date_label, font=font(24, True), fill=white)
+        draw.text((x + 43, 1483), event, font=font(23), fill=muted)
+
+    # Recomandare mare
+    draw.rounded_rectangle((48, 1565, 1032, 1775), radius=26, fill=cream)
+    draw.text((80, 1600), "RECOMANDAREA ZILEI", font=font(31, True), fill=ink)
     draw_wrapped(
         draw,
         recommendation,
-        (110, 1600),
-        67,
+        (80, 1660),
+        49,
         font(32, True),
         ink,
-        spacing=13,
+        spacing=12,
     )
 
     # Footer
     footer = (
-        f"Stare: {mood}  |  Localizare: {location(today)}  |  "
-        f"Zile până la Brașov: {days_to_brasov}"
+        f"Localizare: {location(today)}  •  Zile până la Brașov: {days_to_brasov}"
     )
-    draw.text((80, 1735), footer, font=font(24, True), fill=accent)
+    draw.text((60, 1820), footer, font=font(24, True), fill=accent)
     draw.text(
-        (80, 1770),
-        "Raport generat automat. Orice asemănare cu realitatea este absolut intenționată.",
+        (60, 1858),
+        "Raport generat automat. Orice asemănare cu realitatea este intenționată.",
         font=font(20),
         fill=muted,
     )
 
     output = io.BytesIO()
-    img.save(output, format="JPEG", quality=95)
+    img.save(output, format="JPEG", quality=96)
     return output.getvalue()
 
 
