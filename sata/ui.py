@@ -9,7 +9,7 @@ def apply_base_styles() -> None:
         <style>
         [data-testid="stSidebarNav"] { display: none; }
         .stApp { background: #eef1f4; }
-        .block-container { max-width: 1180px; padding-top: 1.25rem; padding-bottom: 3rem; }
+        .block-container { max-width: 1180px; padding-top: 4.75rem; padding-bottom: 3rem; }
         .hero {
           background: linear-gradient(135deg,#14212c,#243746);
           color:white; padding:28px 34px; border-radius:20px; margin-bottom:18px;
@@ -37,12 +37,12 @@ def apply_base_styles() -> None:
           text-align:center; box-shadow:0 8px 28px rgba(0,0,0,.08);
         }
         .top-nav {
-          display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 16px 0;
+          display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 16px 0; position:relative; z-index:5;
         }
         .top-nav a, .open-tool {
           display:inline-block; text-decoration:none !important; padding:10px 15px;
           border-radius:10px; border:1px solid #cbd3d9; background:#ffffff;
-          color:#25323c !important; font-weight:750; box-shadow:0 2px 7px rgba(0,0,0,.04);
+          color:#25323c !important; font-weight:750; line-height:1.25; min-height:44px; box-sizing:border-box; box-shadow:0 2px 7px rgba(0,0,0,.04);
         }
         .top-nav a:hover, .open-tool:hover { border-color:#738493; background:#f8fafb; }
         .tool-card {
@@ -65,6 +65,11 @@ def apply_base_styles() -> None:
           border-top:2px solid #555; border-left:2px solid #555;
           border-right:2px solid white; border-bottom:2px solid white;
           margin:14px; padding:22px; background:#d4d0c8;
+        }
+        @media (max-width: 700px) {
+          .block-container { padding-top: 4.25rem; }
+          .top-nav { gap:7px; }
+          .top-nav a { padding:9px 11px; font-size:.9rem; }
         }
         </style>
         """,
