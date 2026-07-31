@@ -26,3 +26,14 @@ Aplicația include:
 - export JPG;
 - alarme WAV;
 - mod de testare a datei din sidebar.
+
+## Faza 1 — Laborator și Fricometru
+
+Versiunea 4.1 folosește `st.navigation` cu navigarea standard ascunsă.
+Rutele sunt:
+
+- `/` — Raportul oficial
+- `/laborator` — Laboratorul S.A.T.A.
+- `/fricometru` — FRICOMETRU.EXE
+
+Butonul către Fricometru este un link HTML cu `target="_blank"`, deci instrumentul se deschide într-un tab nou al browserului.
