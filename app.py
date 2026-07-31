@@ -167,16 +167,44 @@ def autoplay_sound(filename):
 
 
 def font(size, bold=False):
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold
-        else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    """
+    Selectează un font Unicode care suportă diacriticele românești.
+    Nu folosim ImageFont.load_default(), deoarece acel font nu include
+    toate caracterele: ă â î ș ț Ă Â Î Ș Ț.
+    """
+    preferred_names = (
+        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+        "NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf",
+        "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf",
+    )
+
+    # 1. Încercăm direct numele fontului; Pillow îl poate găsi prin sistem.
+    for name in preferred_names:
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            pass
+
+    # 2. Căutăm în directoarele standard Linux folosite de Streamlit Cloud.
+    search_roots = [
+        Path("/usr/share/fonts"),
+        Path("/usr/local/share/fonts"),
+        Path.home() / ".fonts",
     ]
-    for candidate in candidates:
-        if Path(candidate).exists():
-            return ImageFont.truetype(candidate, size)
-    return ImageFont.load_default()
+
+    for root in search_roots:
+        if not root.exists():
+            continue
+        for name in preferred_names:
+            matches = list(root.rglob(name))
+            if matches:
+                return ImageFont.truetype(str(matches[0]), size)
+
+    # Mai bine o eroare clară decât un raport cu diacritice stricate.
+    raise RuntimeError(
+        "Nu a fost găsit niciun font Unicode compatibil. "
+        "Sunt necesare DejaVu Sans, Noto Sans sau Liberation Sans."
+    )
 
 
 def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
@@ -188,7 +216,22 @@ def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
     return bbox[3]
 
 
+def verify_romanian_text_support():
+    # Forțează încărcarea fontului înainte de generarea raportului.
+    # Textul este folosit pentru a verifica toate diacriticele românești.
+    test_font = font(32, False)
+    test_img = Image.new("RGB", (900, 100), "white")
+    test_draw = ImageDraw.Draw(test_img)
+    test_draw.text(
+        (10, 20),
+        "Ă Â Î Ș Ț ă â î ș ț — România, Ploiești, Brașov, țintă",
+        font=test_font,
+        fill="black",
+    )
+
+
 def create_daily_report_jpg(today, tension, recommendation):
+    verify_romanian_text_support()
     width, height = 1080, 1920
 
     bg = (8, 14, 20)
