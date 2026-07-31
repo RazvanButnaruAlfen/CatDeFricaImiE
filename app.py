@@ -1,10 +1,7 @@
 import base64
-import io
-import math
 import random
-import struct
-import wave
 from datetime import date, datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import plotly.graph_objects as go
@@ -20,6 +17,8 @@ st.set_page_config(
 ROMANIA_DATE = date(2026, 8, 9)
 PLOIESTI_DATE = date(2026, 8, 14)
 TIMEZONE = ZoneInfo("Europe/Bucharest")
+BASE_DIR = Path(__file__).parent
+SOUND_DIR = BASE_DIR / "sounds"
 
 FUNNY_MESSAGES = [
     "Surse din Olanda confirmă că Răzvan își verifică bagajele.",
@@ -42,14 +41,15 @@ def fear_level(today: date) -> int:
         days_left = (ROMANIA_DATE - today).days
         return max(5, 20 - days_left * 2)
 
-    if ROMANIA_DATE <= today < PLOIESTI_DATE:
-        progression = {
-            date(2026, 8, 9): 25,
-            date(2026, 8, 10): 40,
-            date(2026, 8, 11): 55,
-            date(2026, 8, 12): 70,
-            date(2026, 8, 13): 90,
-        }
+    progression = {
+        date(2026, 8, 9): 25,
+        date(2026, 8, 10): 40,
+        date(2026, 8, 11): 55,
+        date(2026, 8, 12): 70,
+        date(2026, 8, 13): 90,
+    }
+
+    if today < PLOIESTI_DATE:
         return progression.get(today, 90)
 
     return 100
@@ -65,7 +65,7 @@ def intelligence_report(today: date) -> str:
     if today == ROMANIA_DATE:
         return "🛬 CONFIRMAT: ținta a intrat în România, dar se află încă departe de Alexandra."
     if today == date(2026, 8, 10):
-        return "📡 Semnal detectat în România. Distanța față de Alexandra rămâne momentan acceptabilă."
+        return "📡 Semnal detectat în România. Distanța față de Alexandra rămâne acceptabilă."
     if today == date(2026, 8, 11):
         return "🧳 Bagajele au fost repoziționate. Intențiile țintei sunt încă neclare."
     if today == date(2026, 8, 12):
@@ -91,84 +91,6 @@ def status_for(value: int) -> tuple[str, str]:
     return "💀", "Răzvan a ajuns în Ploiești."
 
 
-def make_tone(
-    duration: float,
-    start_frequency: float,
-    end_frequency: float,
-    pulse_speed: float,
-    sample_rate: int = 22050,
-) -> bytes:
-    """Create a WAV alert sound without needing separate audio files."""
-    buffer = io.BytesIO()
-
-    with wave.open(buffer, "wb") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-
-        frames = bytearray()
-        phase = 0.0
-
-        for i in range(int(duration * sample_rate)):
-            t = i / sample_rate
-            position = t / duration
-            frequency = start_frequency + (end_frequency - start_frequency) * position
-
-            pulse = 0.55 + 0.45 * math.sin(2 * math.pi * pulse_speed * t)
-            phase += 2 * math.pi * frequency / sample_rate
-
-            sample = 0.30 * pulse * math.sin(phase)
-            sample += 0.08 * math.sin(2 * phase)
-            sample = max(-1.0, min(1.0, sample))
-            frames.extend(struct.pack("<h", int(sample * 32767)))
-
-        wav_file.writeframes(frames)
-
-    return buffer.getvalue()
-
-
-def sound_50() -> bytes:
-    # Short warning beep
-    return make_tone(
-        duration=1.2,
-        start_frequency=520,
-        end_frequency=680,
-        pulse_speed=4.0,
-    )
-
-
-def sound_80() -> bytes:
-    # More urgent rising alarm
-    return make_tone(
-        duration=2.2,
-        start_frequency=650,
-        end_frequency=1050,
-        pulse_speed=6.0,
-    )
-
-
-def sound_100() -> bytes:
-    # Full siren
-    return make_tone(
-        duration=4.0,
-        start_frequency=480,
-        end_frequency=1200,
-        pulse_speed=1.4,
-    )
-
-
-def play_audio(audio_bytes: bytes) -> None:
-    encoded = base64.b64encode(audio_bytes).decode("utf-8")
-    st.markdown(
-        f"""
-        <audio autoplay>
-            <source src="data:audio/wav;base64,{encoded}" type="audio/wav">
-        </audio>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def alert_zone(value: int) -> int:
     if value >= 100:
         return 100
@@ -179,9 +101,28 @@ def alert_zone(value: int) -> int:
     return 0
 
 
+def autoplay_sound(filename: str, loop: bool = False) -> None:
+    path = SOUND_DIR / filename
+
+    if not path.exists():
+        st.error(f"Fișier audio lipsă: {path}")
+        return
+
+    encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
+    loop_attribute = "loop" if loop else ""
+
+    st.markdown(
+        f"""
+        <audio autoplay {loop_attribute}>
+            <source src="data:audio/wav;base64,{encoded}" type="audio/wav">
+        </audio>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 today = today_in_romania()
 automatic_fear = fear_level(today)
-emoji, status = status_for(automatic_fear)
 
 if "random_message" not in st.session_state:
     st.session_state.random_message = random.choice(FUNNY_MESSAGES)
@@ -228,14 +169,6 @@ gauge = go.Figure(
 gauge.update_layout(height=350, margin=dict(l=20, r=20, t=80, b=20))
 st.plotly_chart(gauge, use_container_width=True)
 
-st.markdown(
-    f"""
-    <div style="text-align:center;font-size:105px">{emoji}</div>
-    <div style="text-align:center;font-size:25px;font-weight:bold">{status}</div>
-    """,
-    unsafe_allow_html=True,
-)
-
 st.divider()
 st.subheader("🛰️ Raport de informații")
 st.info(intelligence_report(today))
@@ -266,42 +199,38 @@ manual_fear = st.slider(
     step=1,
 )
 
-difference = manual_fear - automatic_fear
+active_fear = max(automatic_fear, manual_fear)
+emoji, status = status_for(active_fear)
 
-if difference > 15:
-    st.warning("Analiza indică faptul că Alexandra este mai speriată decât admite sistemul.")
-elif difference < -15:
-    st.success("Alexandra pretinde că situația este sub control. Sistemul rămâne sceptic.")
-else:
-    st.info("Declarația Alexandrei este aproximativ compatibilă cu datele serviciilor secrete.")
+st.markdown(
+    f"""
+    <div style="text-align:center;font-size:100px">{emoji}</div>
+    <div style="text-align:center;font-size:24px;font-weight:bold">{status}</div>
+    """,
+    unsafe_allow_html=True,
+)
 
 m1, m2, m3 = st.columns(3)
 m1.metric("Frică automată", f"{automatic_fear}%")
 m2.metric("Frică declarată", f"{manual_fear}%")
 m3.metric("Zile până la Ploiești", max(0, (PLOIESTI_DATE - today).days))
 
-# The strongest of the automatic and declared levels controls the sound.
-active_fear = max(automatic_fear, manual_fear)
 current_zone = alert_zone(active_fear)
+previous_zone = st.session_state.last_alert_zone
 
-# Play only when entering a higher alert zone, not on every Streamlit rerun.
-if current_zone > st.session_state.last_alert_zone:
+if current_zone > previous_zone:
     if current_zone == 50:
-        play_audio(sound_50())
-        st.warning("🔔 Nivelul de 50% a fost depășit: avertizare moderată.")
+        autoplay_sound("beep50.wav")
+        st.warning("🔔 50%: avertizare moderată. Bip rar activat.")
     elif current_zone == 80:
-        play_audio(sound_80())
-        st.error("🚨 Nivelul de 80% a fost depășit: alertă severă.")
+        autoplay_sound("beep80.wav")
+        st.error("🚨 80%: alertă severă. Bip rapid activat.")
     elif current_zone == 100:
-        play_audio(sound_100())
+        autoplay_sound("siren100.wav")
         st.balloons()
-        st.error("💀 100%: RĂZVAN A AJUNS. NU MAI EXISTĂ SCĂPARE.")
+        st.error("💀 100%: WEEEO! RĂZVAN A AJUNS ÎN PLOIEȘTI!")
 
 st.session_state.last_alert_zone = current_zone
-
-# Reset the trigger when the slider goes back below a threshold.
-if current_zone < st.session_state.last_alert_zone:
-    st.session_state.last_alert_zone = current_zone
 
 st.divider()
 st.subheader("🔊 Testarea alarmelor")
@@ -309,16 +238,16 @@ st.subheader("🔊 Testarea alarmelor")
 sound_col1, sound_col2, sound_col3 = st.columns(3)
 
 with sound_col1:
-    if st.button("🔔 Sunet 50%", use_container_width=True):
-        play_audio(sound_50())
+    if st.button("🔔 Test 50%", use_container_width=True):
+        autoplay_sound("beep50.wav")
 
 with sound_col2:
-    if st.button("🚨 Sunet 80%", use_container_width=True):
-        play_audio(sound_80())
+    if st.button("🚨 Test 80%", use_container_width=True):
+        autoplay_sound("beep80.wav")
 
 with sound_col3:
-    if st.button("💀 Sunet 100%", use_container_width=True):
-        play_audio(sound_100())
+    if st.button("💀 Test 100%", use_container_width=True):
+        autoplay_sound("siren100.wav")
 
 if active_fear >= 80:
     st.warning("Ascunde berea. Încuie ușa. Nu răspunde imediat la telefon.")
@@ -327,6 +256,6 @@ if today >= PLOIESTI_DATE:
     st.error("💀 ALERTĂ MAXIMĂ: RĂZVAN A AJUNS ÎN PLOIEȘTI!")
 
 st.caption(
-    "Unele browsere blochează sunetele automate înainte de prima interacțiune. "
+    "Unele browsere blochează sunetul automat înainte de prima interacțiune. "
     "În acest caz, apasă o dată pe unul dintre butoanele de test."
 )
