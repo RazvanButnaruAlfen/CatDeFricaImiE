@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
+from matplotlib import font_manager
 
 
 st.set_page_config(
@@ -168,52 +169,20 @@ def autoplay_sound(filename):
 
 def font(size, bold=False):
     """
-    Selectează un font Unicode care suportă diacriticele românești.
-    Nu folosim ImageFont.load_default(), deoarece acel font nu include
-    toate caracterele: ă â î ș ț Ă Â Î Ș Ț.
+    Folosește fonturile DejaVu livrate împreună cu Matplotlib.
+    Astfel, aplicația nu depinde de fonturile instalate în Streamlit Cloud
+    și redă corect diacriticele românești: ă â î ș ț.
     """
-    preferred_names = (
-        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
-        "NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf",
-        "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf",
+    properties = font_manager.FontProperties(
+        family="DejaVu Sans",
+        weight="bold" if bold else "normal",
     )
+    font_path = font_manager.findfont(properties, fallback_to_default=True)
 
-    # 1. Încercăm direct numele fontului; Pillow îl poate găsi prin sistem.
-    for name in preferred_names:
-        try:
-            return ImageFont.truetype(name, size)
-        except OSError:
-            pass
+    if not font_path or not Path(font_path).exists():
+        raise RuntimeError("Fontul Unicode DejaVu Sans nu a putut fi localizat.")
 
-    # 2. Căutăm în directoarele standard Linux folosite de Streamlit Cloud.
-    search_roots = [
-        Path("/usr/share/fonts"),
-        Path("/usr/local/share/fonts"),
-        Path.home() / ".fonts",
-    ]
-
-    for root in search_roots:
-        if not root.exists():
-            continue
-        for name in preferred_names:
-            matches = list(root.rglob(name))
-            if matches:
-                return ImageFont.truetype(str(matches[0]), size)
-
-    # Mai bine o eroare clară decât un raport cu diacritice stricate.
-    raise RuntimeError(
-        "Nu a fost găsit niciun font Unicode compatibil. "
-        "Sunt necesare DejaVu Sans, Noto Sans sau Liberation Sans."
-    )
-
-
-def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
-    lines = []
-    for paragraph in text.split("\n"):
-        lines.extend(textwrap.wrap(paragraph, width=width_chars) or [""])
-    draw.multiline_text(xy, "\n".join(lines), font=font_obj, fill=fill, spacing=spacing)
-    bbox = draw.multiline_textbbox(xy, "\n".join(lines), font=font_obj, spacing=spacing)
-    return bbox[3]
+    return ImageFont.truetype(font_path, size)
 
 
 def verify_romanian_text_support():
