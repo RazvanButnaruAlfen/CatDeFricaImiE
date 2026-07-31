@@ -185,6 +185,32 @@ def font(size, bold=False):
     return ImageFont.truetype(font_path, size)
 
 
+def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
+    """
+    Desenează text pe mai multe rânduri și returnează coordonata Y
+    a marginii inferioare. Folosește textwrap, deja importat în aplicație.
+    """
+    lines = []
+    for paragraph in str(text).split("\n"):
+        lines.extend(textwrap.wrap(paragraph, width=width_chars) or [""])
+
+    wrapped_text = "\n".join(lines)
+    draw.multiline_text(
+        xy,
+        wrapped_text,
+        font=font_obj,
+        fill=fill,
+        spacing=spacing,
+    )
+    bbox = draw.multiline_textbbox(
+        xy,
+        wrapped_text,
+        font=font_obj,
+        spacing=spacing,
+    )
+    return bbox[3]
+
+
 def verify_romanian_text_support():
     # Forțează încărcarea fontului înainte de generarea raportului.
     # Textul este folosit pentru a verifica toate diacriticele românești.
