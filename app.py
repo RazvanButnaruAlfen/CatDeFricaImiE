@@ -305,7 +305,7 @@ def create_daily_report_jpg(today, tension, recommendation):
     # Operational report + conclusion
     draw.rounded_rectangle((45, 700, 1035, 1015), radius=28, fill=panel)
     draw.text((80, 742), "BULETIN OPERATIV", font=font(42, True), fill=accent)
-    draw_wrapped(draw, operational_report(today), (80, 815), 42, font(38), white, spacing=15)
+    draw_wrapped(draw, operational_report(today), (80, 815), 24, font(34), white, spacing=12)
 
     draw.rounded_rectangle((620, 790, 985, 965), radius=20, fill=cream)
     draw.text((650, 820), "CONCLUZIE", font=font(28, True), fill=ink)
