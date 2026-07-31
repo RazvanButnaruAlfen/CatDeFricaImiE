@@ -1,17 +1,16 @@
-# S.A.T.A. — Iterația 4
+# S.A.T.A. — Iterația 5
 
-Nou în această versiune:
-- folder `assets` cu icoane PNG;
-- moară de vânt pentru Olanda;
-- steagul României;
-- clădire simbolică pentru Ploiești;
-- munți și castel pentru Brașov;
-- raport mai compact, cu fonturi mari și traseu vizual.
+Modificări:
+- adăugat `assets/top_secret.png`;
+- raportul folosește iconița TOP SECRET din folderul Assets;
+- fonturile raportului au fost mărite considerabil;
+- titlurile, procentul, protocolul, buletinul operativ și recomandarea sunt mai ușor de citit pe telefon.
 
 Structura GitHub:
 app.py
 requirements.txt
 assets/
+    top_secret.png
     olanda.png
     romania.png
     ploiesti.png
