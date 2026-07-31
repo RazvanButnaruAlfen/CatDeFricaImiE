@@ -211,6 +211,89 @@ def draw_wrapped(draw, text, xy, width_chars, font_obj, fill, spacing=10):
     return bbox[3]
 
 
+def draw_text_in_box(
+    draw,
+    text,
+    box,
+    initial_font_size,
+    min_font_size,
+    bold,
+    fill,
+    spacing=8,
+):
+    """
+    Încadrează automat textul într-o zonă fixă.
+    Reduce fontul numai dacă este necesar și nu permite textului
+    să intre în secțiunea următoare.
+    """
+    x1, y1, x2, y2 = box
+    max_width = x2 - x1
+    max_height = y2 - y1
+
+    for size in range(initial_font_size, min_font_size - 1, -1):
+        font_obj = font(size, bold)
+
+        # Determină aproximativ câte caractere încap pe un rând.
+        sample_bbox = draw.textbbox((0, 0), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", font=font_obj)
+        avg_char_width = max(1, (sample_bbox[2] - sample_bbox[0]) / 26)
+        width_chars = max(8, int(max_width / avg_char_width))
+
+        lines = []
+        for paragraph in str(text).split("\n"):
+            lines.extend(textwrap.wrap(paragraph, width=width_chars) or [""])
+
+        wrapped = "\n".join(lines)
+        bbox = draw.multiline_textbbox(
+            (x1, y1),
+            wrapped,
+            font=font_obj,
+            spacing=spacing,
+        )
+
+        if (bbox[2] - bbox[0]) <= max_width and (bbox[3] - bbox[1]) <= max_height:
+            draw.multiline_text(
+                (x1, y1),
+                wrapped,
+                font=font_obj,
+                fill=fill,
+                spacing=spacing,
+            )
+            return
+
+    # Fallback: folosește fontul minim și taie ultimele rânduri dacă este nevoie.
+    font_obj = font(min_font_size, bold)
+    sample_bbox = draw.textbbox((0, 0), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", font=font_obj)
+    avg_char_width = max(1, (sample_bbox[2] - sample_bbox[0]) / 26)
+    width_chars = max(8, int(max_width / avg_char_width))
+
+    lines = []
+    for paragraph in str(text).split("\n"):
+        lines.extend(textwrap.wrap(paragraph, width=width_chars) or [""])
+
+    while lines:
+        wrapped = "\n".join(lines)
+        bbox = draw.multiline_textbbox(
+            (x1, y1),
+            wrapped,
+            font=font_obj,
+            spacing=spacing,
+        )
+        if (bbox[3] - bbox[1]) <= max_height:
+            break
+        lines.pop()
+
+    if lines:
+        if len(lines) < len(textwrap.wrap(str(text), width=width_chars)):
+            lines[-1] = lines[-1].rstrip(" .") + "…"
+        draw.multiline_text(
+            (x1, y1),
+            "\n".join(lines),
+            font=font_obj,
+            fill=fill,
+            spacing=spacing,
+        )
+
+
 def verify_romanian_text_support():
     # Forțează încărcarea fontului înainte de generarea raportului.
     # Textul este folosit pentru a verifica toate diacriticele românești.
@@ -305,7 +388,16 @@ def create_daily_report_jpg(today, tension, recommendation):
     # Operational report + conclusion
     draw.rounded_rectangle((45, 700, 1035, 1015), radius=28, fill=panel)
     draw.text((80, 742), "BULETIN OPERATIV", font=font(42, True), fill=accent)
-    draw_wrapped(draw, operational_report(today), (80, 815), 24, font(34), white, spacing=12)
+    draw_text_in_box(
+        draw,
+        operational_report(today),
+        box=(80, 815, 585, 970),
+        initial_font_size=34,
+        min_font_size=25,
+        bold=False,
+        fill=white,
+        spacing=9,
+    )
 
     draw.rounded_rectangle((620, 790, 985, 965), radius=20, fill=cream)
     draw.text((650, 820), "CONCLUZIE", font=font(28, True), fill=ink)
