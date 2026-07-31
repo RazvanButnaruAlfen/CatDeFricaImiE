@@ -17,7 +17,6 @@ st.set_page_config(
     layout="centered",
 )
 
-# Important dates
 ROMANIA_DATE = date(2026, 8, 9)
 PLOIESTI_DATE = date(2026, 8, 14)
 TIMEZONE = ZoneInfo("Europe/Bucharest")
@@ -39,7 +38,6 @@ def today_in_romania() -> date:
 
 
 def fear_level(today: date) -> int:
-    """Automatic fear level based on Răzvan's travel timeline."""
     if today < ROMANIA_DATE:
         days_left = (ROMANIA_DATE - today).days
         return max(5, 20 - days_left * 2)
@@ -64,25 +62,18 @@ def intelligence_report(today: date) -> str:
             f"🛰️ Răzvan se află încă în Olanda. "
             f"Intrarea pe teritoriul României este estimată peste {days} zile."
         )
-
     if today == ROMANIA_DATE:
-        return "🛬 CONFIRMAT: ținta a intrat pe teritoriul României, dar se află încă departe de Alexandra."
-
+        return "🛬 CONFIRMAT: ținta a intrat în România, dar se află încă departe de Alexandra."
     if today == date(2026, 8, 10):
         return "📡 Semnal detectat în România. Distanța față de Alexandra rămâne momentan acceptabilă."
-
     if today == date(2026, 8, 11):
         return "🧳 Bagajele au fost repoziționate. Intențiile țintei sunt încă neclare."
-
     if today == date(2026, 8, 12):
         return "🚗 Activitate rutieră suspectă. Ploieștiul a fost introdus în sistemul de navigație."
-
     if today == date(2026, 8, 13):
         return "⚠️ ULTIMA AVERTIZARE: sosirea în Ploiești este estimată pentru mâine."
-
     if today == PLOIESTI_DATE:
         return "🚨 CONTACT VIZUAL: Răzvan a ajuns în Ploiești. Nu mai există cale de scăpare."
-
     return "💀 Operațiunea a intrat în faza post-impact. Răzvan se află deja în zona Ploiești."
 
 
@@ -100,7 +91,14 @@ def status_for(value: int) -> tuple[str, str]:
     return "💀", "Răzvan a ajuns în Ploiești."
 
 
-def make_siren(duration: float = 3.0, sample_rate: int = 22050) -> bytes:
+def make_tone(
+    duration: float,
+    start_frequency: float,
+    end_frequency: float,
+    pulse_speed: float,
+    sample_rate: int = 22050,
+) -> bytes:
+    """Create a WAV alert sound without needing separate audio files."""
     buffer = io.BytesIO()
 
     with wave.open(buffer, "wb") as wav_file:
@@ -109,19 +107,54 @@ def make_siren(duration: float = 3.0, sample_rate: int = 22050) -> bytes:
         wav_file.setframerate(sample_rate)
 
         frames = bytearray()
+        phase = 0.0
 
         for i in range(int(duration * sample_rate)):
             t = i / sample_rate
-            sweep = 0.5 + 0.5 * math.sin(2 * math.pi * 0.8 * t)
-            frequency = 500 + 450 * sweep
-            sample = 0.38 * math.sin(2 * math.pi * frequency * t)
-            sample += 0.10 * math.sin(2 * math.pi * frequency * 2 * t)
+            position = t / duration
+            frequency = start_frequency + (end_frequency - start_frequency) * position
+
+            pulse = 0.55 + 0.45 * math.sin(2 * math.pi * pulse_speed * t)
+            phase += 2 * math.pi * frequency / sample_rate
+
+            sample = 0.30 * pulse * math.sin(phase)
+            sample += 0.08 * math.sin(2 * phase)
             sample = max(-1.0, min(1.0, sample))
             frames.extend(struct.pack("<h", int(sample * 32767)))
 
         wav_file.writeframes(frames)
 
     return buffer.getvalue()
+
+
+def sound_50() -> bytes:
+    # Short warning beep
+    return make_tone(
+        duration=1.2,
+        start_frequency=520,
+        end_frequency=680,
+        pulse_speed=4.0,
+    )
+
+
+def sound_80() -> bytes:
+    # More urgent rising alarm
+    return make_tone(
+        duration=2.2,
+        start_frequency=650,
+        end_frequency=1050,
+        pulse_speed=6.0,
+    )
+
+
+def sound_100() -> bytes:
+    # Full siren
+    return make_tone(
+        duration=4.0,
+        start_frequency=480,
+        end_frequency=1200,
+        pulse_speed=1.4,
+    )
 
 
 def play_audio(audio_bytes: bytes) -> None:
@@ -136,6 +169,16 @@ def play_audio(audio_bytes: bytes) -> None:
     )
 
 
+def alert_zone(value: int) -> int:
+    if value >= 100:
+        return 100
+    if value >= 80:
+        return 80
+    if value >= 50:
+        return 50
+    return 0
+
+
 today = today_in_romania()
 automatic_fear = fear_level(today)
 emoji, status = status_for(automatic_fear)
@@ -143,11 +186,13 @@ emoji, status = status_for(automatic_fear)
 if "random_message" not in st.session_state:
     st.session_state.random_message = random.choice(FUNNY_MESSAGES)
 
+if "last_alert_zone" not in st.session_state:
+    st.session_state.last_alert_zone = 0
+
 st.title("🚨 OPERAȚIUNEA PLOIEȘTI")
 st.subheader("Sistem automat de avertizare pentru Alexandra")
 st.caption(f"Data sistemului: {today.strftime('%d.%m.%Y')} · Ora României")
 
-# Countdown area
 if today < ROMANIA_DATE:
     st.info(f"🇷🇴 Răzvan intră în România peste **{(ROMANIA_DATE - today).days} zile**.")
 elif today < PLOIESTI_DATE:
@@ -158,7 +203,6 @@ elif today < PLOIESTI_DATE:
 else:
     st.error("📍 Răzvan este în Ploiești.")
 
-# Automatic gauge
 gauge = go.Figure(
     go.Indicator(
         mode="gauge+number",
@@ -169,15 +213,14 @@ gauge = go.Figure(
             "axis": {"range": [0, 100]},
             "bar": {"color": "darkred", "thickness": 0.30},
             "steps": [
-                {"range": [0, 25], "color": "lightgreen"},
-                {"range": [25, 50], "color": "khaki"},
-                {"range": [50, 75], "color": "orange"},
-                {"range": [75, 100], "color": "tomato"},
+                {"range": [0, 50], "color": "lightgreen"},
+                {"range": [50, 80], "color": "khaki"},
+                {"range": [80, 100], "color": "tomato"},
             ],
             "threshold": {
                 "line": {"color": "black", "width": 6},
                 "thickness": 0.8,
-                "value": 90,
+                "value": 80,
             },
         },
     )
@@ -237,22 +280,53 @@ m1.metric("Frică automată", f"{automatic_fear}%")
 m2.metric("Frică declarată", f"{manual_fear}%")
 m3.metric("Zile până la Ploiești", max(0, (PLOIESTI_DATE - today).days))
 
+# The strongest of the automatic and declared levels controls the sound.
+active_fear = max(automatic_fear, manual_fear)
+current_zone = alert_zone(active_fear)
+
+# Play only when entering a higher alert zone, not on every Streamlit rerun.
+if current_zone > st.session_state.last_alert_zone:
+    if current_zone == 50:
+        play_audio(sound_50())
+        st.warning("🔔 Nivelul de 50% a fost depășit: avertizare moderată.")
+    elif current_zone == 80:
+        play_audio(sound_80())
+        st.error("🚨 Nivelul de 80% a fost depășit: alertă severă.")
+    elif current_zone == 100:
+        play_audio(sound_100())
+        st.balloons()
+        st.error("💀 100%: RĂZVAN A AJUNS. NU MAI EXISTĂ SCĂPARE.")
+
+st.session_state.last_alert_zone = current_zone
+
+# Reset the trigger when the slider goes back below a threshold.
+if current_zone < st.session_state.last_alert_zone:
+    st.session_state.last_alert_zone = current_zone
+
 st.divider()
+st.subheader("🔊 Testarea alarmelor")
 
-if st.button("🚨 TESTEAZĂ SIRENA", use_container_width=True):
-    play_audio(make_siren())
-    st.error("SIRENA A FOST ACTIVATĂ!")
+sound_col1, sound_col2, sound_col3 = st.columns(3)
 
-if automatic_fear >= 90:
+with sound_col1:
+    if st.button("🔔 Sunet 50%", use_container_width=True):
+        play_audio(sound_50())
+
+with sound_col2:
+    if st.button("🚨 Sunet 80%", use_container_width=True):
+        play_audio(sound_80())
+
+with sound_col3:
+    if st.button("💀 Sunet 100%", use_container_width=True):
+        play_audio(sound_100())
+
+if active_fear >= 80:
     st.warning("Ascunde berea. Încuie ușa. Nu răspunde imediat la telefon.")
 
 if today >= PLOIESTI_DATE:
-    st.balloons()
     st.error("💀 ALERTĂ MAXIMĂ: RĂZVAN A AJUNS ÎN PLOIEȘTI!")
-    # Browsers may block automatic audio until the user interacts with the page.
-    play_audio(make_siren())
 
 st.caption(
-    "Notă tehnică: unele browsere blochează sunetul automat. "
-    "Butonul «Testează sirena» funcționează după interacțiunea cu pagina."
+    "Unele browsere blochează sunetele automate înainte de prima interacțiune. "
+    "În acest caz, apasă o dată pe unul dintre butoanele de test."
 )
