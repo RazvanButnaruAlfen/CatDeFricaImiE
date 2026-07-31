@@ -308,8 +308,8 @@ def create_daily_report_jpg(today, tension, recommendation):
     draw_wrapped(draw, operational_report(today), (80, 815), 42, font(38), white, spacing=15)
 
     draw.rounded_rectangle((620, 790, 985, 965), radius=20, fill=cream)
-    draw.text((650, 820), "CONCLUZIE", font=font(31, True), fill=ink)
-    draw_wrapped(draw, verdict, (650, 875), 22, font(31, True), ink, spacing=11)
+    draw.text((650, 820), "CONCLUZIE", font=font(28, True), fill=ink)
+    draw_wrapped(draw, verdict, (650, 870), 24, font(25, True), ink, spacing=8)
 
     # Route section
     draw.rounded_rectangle((45, 1045, 1035, 1395), radius=28, fill=panel2)
@@ -347,8 +347,8 @@ def create_daily_report_jpg(today, tension, recommendation):
 
     # Recommendation
     draw.rounded_rectangle((45, 1675, 1035, 1840), radius=28, fill=cream)
-    draw.text((80, 1710), "RECOMANDAREA ZILEI", font=font(40, True), fill=ink)
-    draw_wrapped(draw, recommendation, (80, 1768), 42, font(37, True), ink, spacing=13)
+    draw.text((80, 1710), "RECOMANDAREA ZILEI", font=font(34, True), fill=ink)
+    draw_wrapped(draw, recommendation, (80, 1762), 52, font(29, True), ink, spacing=8)
 
     # Footer
     days_to_brasov = max(0, (BRASOV_START - today).days)
